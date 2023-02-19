@@ -10,6 +10,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(opciones => opciones.UseSqlS
 //Agregar Servicio de Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
 
+//Url de retorno al acceder a una url que necesita Autorizacion
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = new PathString("/Cuentas/Acceso");
+});
+
+
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

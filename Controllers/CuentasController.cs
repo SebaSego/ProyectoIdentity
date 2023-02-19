@@ -23,16 +23,20 @@ namespace ProyectoIdentity.Controllers
         }
 
         [HttpGet] 
-        public async Task<IActionResult> Registro() 
+        public async Task<IActionResult> Registro(string returnurl = null) 
         {
+            ViewData["ReturnUrl"] = returnurl;
             RegistroViewModel registroVM = new RegistroViewModel();
             return View(registroVM);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken] // Este Decorador se usa para prevenir ataques al enviar la informacion
-        public async Task<IActionResult> Registro(RegistroViewModel rgViewModel)
+        public async Task<IActionResult> Registro(RegistroViewModel rgViewModel, string returnurl = null)
         {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
+
             if (ModelState.IsValid)
             {
                 var usuario = new AppUsuario();
@@ -53,7 +57,9 @@ namespace ProyectoIdentity.Controllers
                 if(resultado.Succeeded)
                 {
                     await _signInManager.SignInAsync(usuario, isPersistent: false);
-                    return RedirectToAction("Index", "Home");
+                    //return RedirectToAction("Index", "Home");
+                    return LocalRedirect(returnurl);
+
                 }
                 ValidarErrores(resultado);
             }
@@ -71,15 +77,20 @@ namespace ProyectoIdentity.Controllers
 
 
         [HttpGet]
-        public IActionResult Acceso()
+        public IActionResult Acceso(string returnurl=null )
         {
+            ViewData["ReturnUrl"]= returnurl;
+            returnurl = returnurl??Url.Content("~/");
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Acceso(AccesoViewModel accViewModel)
+        public async Task<IActionResult> Acceso(AccesoViewModel accViewModel, string returnurl = null)
         {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl??Url.Content("~/");
+
             if (ModelState.IsValid)
             {
                 
@@ -87,7 +98,8 @@ namespace ProyectoIdentity.Controllers
 
                 if (resultado.Succeeded)
                 {
-                    return RedirectToAction("Index", "Home");
+                    //return RedirectToAction("Index", "Home");
+                    return LocalRedirect(returnurl);
                 }
                 else
                 {
