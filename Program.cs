@@ -10,6 +10,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(opciones => opciones.UseSqlS
 //Agregar Servicio de Identity
 builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
 
+//Configuracion de opciones de Identity
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.Password.RequiredLength = 5;
+    options.Password.RequireLowercase = true;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
+    options.Lockout.MaxFailedAccessAttempts = 3;
+});
+
+
 //Url de retorno al acceder a una url que necesita Autorizacion
 builder.Services.ConfigureApplicationCookie(options =>
 {

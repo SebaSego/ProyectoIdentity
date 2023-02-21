@@ -94,7 +94,7 @@ namespace ProyectoIdentity.Controllers
             if (ModelState.IsValid)
             {
                 
-                var resultado = await _signInManager.PasswordSignInAsync(accViewModel.Email, accViewModel.Password, accViewModel.RememberMe, lockoutOnFailure: false);
+                var resultado = await _signInManager.PasswordSignInAsync(accViewModel.Email, accViewModel.Password, accViewModel.RememberMe, lockoutOnFailure: true);
 
                 if (resultado.Succeeded)
                 {
