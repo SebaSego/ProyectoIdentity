@@ -24,6 +24,7 @@ builder.Services.Configure<IdentityOptions>(options =>
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = new PathString("/Cuentas/Acceso");
+    options.AccessDeniedPath = new PathString("/Cuentas/Bloqueado")
 });
 
 

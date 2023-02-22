@@ -101,6 +101,11 @@ namespace ProyectoIdentity.Controllers
                     //return RedirectToAction("Index", "Home");
                     return LocalRedirect(returnurl);
                 }
+                if (resultado.IsLockedOut)
+                {
+                    return View("Bloqueado");
+
+                }
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Acceso inválido");
