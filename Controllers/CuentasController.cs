@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.AspNetCore.Identity.UI.V4.Pages.Account.Internal;
 using Microsoft.AspNetCore.Mvc;
 using ProyectoIdentity.Models;
 
@@ -8,12 +11,14 @@ namespace ProyectoIdentity.Controllers
     {
         private readonly UserManager<IdentityUser> _userManager;
         private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IEmailSender _emailSender;
 
 
-        public CuentasController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager)
+        public CuentasController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender)
         {
             _userManager= userManager;
             _signInManager= signInManager;
+            _emailSender= emailSender;
         }
 
 
@@ -122,6 +127,83 @@ namespace ProyectoIdentity.Controllers
         {
             await _signInManager.SignOutAsync(); //Este SignOutAsync() cierra la sesion y borra las cookies del navegador 
             return RedirectToAction(nameof(HomeController.Index), "Home");
+        }
+
+
+        //Metodo para Recuperar contraseña
+        [HttpGet]
+        public IActionResult OlvidoPassword()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OlvidoPassword(OlvidoPasswordViewModel opViewModel)
+        {
+            if (ModelState.IsValid)
+            {
+                var usuario = await _userManager.FindByEmailAsync(opViewModel.Email);
+                if (usuario == null)
+                {
+                    return RedirectToAction("ConfirmacionOlvidoPassword");
+                }
+                var codigo = await _userManager.GeneratePasswordResetTokenAsync(usuario);
+                var urlRetorno = Url.Action("ResetPassword", "Cuentas", new {userId = usuario.Id, code = codigo}, protocol:HttpContext.Request.Scheme);
+
+                await _emailSender.SendEmailAsync(opViewModel.Email, "Recuperar Contraseña - Proyecto Identity", "Recupere su contraseña haciendo click aqui: <a href=\""+ urlRetorno + "\">enlace</a>");
+
+                return RedirectToAction("ConfirmacionOlvidoPassword");
+
+
+            }
+            return View(opViewModel);           
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult ConfirmacionOlvidoPassword()
+        {
+            return View();
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword(string code=null)
+        {
+            return code == null? View("Error ") : View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ResetPassword(RecuperaPasswordViewModel rpViewModel)
+        {
+            if (ModelState.IsValid)
+            {
+                var usuario = await _userManager.FindByEmailAsync(rpViewModel.Email);
+                if (usuario == null)
+                {
+                    return RedirectToAction("ConfirmacionRecuperaPassword");
+                }
+                
+                var resultado = await _userManager.ResetPasswordAsync(usuario, rpViewModel.Code, rpViewModel.Password);
+                
+                if (resultado.Succeeded)
+                {
+                    return RedirectToAction("ConfirmacionRecuperaPassword");
+
+                }
+
+                ValidarErrores(resultado);
+
+
+            }
+            return View(rpViewModel);
+        }
+
+        [HttpGet]
+        public IActionResult ConfirmacionRecuperaPassword() 
+        {
+            return View();
         }
 
     }

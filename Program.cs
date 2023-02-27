@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using ProyectoIdentity.Datos;
+using ProyectoIdentity.Servicios;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,7 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(opciones => opciones.UseSqlServer(builder.Configuration.GetConnectionString("ConexionSql")));
 
 //Agregar Servicio de Identity
-builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>().AddDefaultTokenProviders();
 
 //Configuracion de opciones de Identity
 builder.Services.Configure<IdentityOptions>(options =>
@@ -20,11 +22,14 @@ builder.Services.Configure<IdentityOptions>(options =>
 });
 
 
+// Agregado Email Sender para envio de email de recupero
+builder.Services.AddTransient<IEmailSender, MailJetEmailSender>();
+
 //Url de retorno al acceder a una url que necesita Autorizacion
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = new PathString("/Cuentas/Acceso");
-    options.AccessDeniedPath = new PathString("/Cuentas/Bloqueado")
+    options.AccessDeniedPath = new PathString("/Cuentas/Bloqueado");
 });
 
 
