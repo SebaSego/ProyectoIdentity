@@ -3,33 +3,49 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Identity.UI.V4.Pages.Account.Internal;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using ProyectoIdentity.Models;
 
 namespace ProyectoIdentity.Controllers
 {
+    [Authorize]
     public class CuentasController : Controller
     {
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IEmailSender _emailSender;
 
 
-        public CuentasController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IEmailSender emailSender)
+        public CuentasController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, RoleManager<IdentityRole> roleManager, IEmailSender emailSender)
         {
             _userManager= userManager;
+            _roleManager= roleManager;
             _signInManager= signInManager;
             _emailSender= emailSender;
         }
 
-
+        [HttpGet]
+        [AllowAnonymous]
         public IActionResult Index()
         {
             return View();
         }
 
-        [HttpGet] 
+        [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> Registro(string returnurl = null) 
         {
+            if (!await _roleManager.RoleExistsAsync("Administrador"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Administrador"));
+            }
+
+            if (!await _roleManager.RoleExistsAsync("Registrado"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Registrado"));
+            }
+
             ViewData["ReturnUrl"] = returnurl;
             RegistroViewModel registroVM = new RegistroViewModel();
             return View(registroVM);
@@ -37,6 +53,7 @@ namespace ProyectoIdentity.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken] // Este Decorador se usa para prevenir ataques al enviar la informacion
+        [AllowAnonymous]
         public async Task<IActionResult> Registro(RegistroViewModel rgViewModel, string returnurl = null)
         {
             ViewData["ReturnUrl"] = returnurl;
@@ -61,6 +78,9 @@ namespace ProyectoIdentity.Controllers
 
                 if(resultado.Succeeded)
                 {
+                    // asignacion de usuario al registrarse
+                    await _userManager.AddToRoleAsync(usuario, "Registrado");
+
                     await _signInManager.SignInAsync(usuario, isPersistent: false);
                     //return RedirectToAction("Index", "Home");
                     return LocalRedirect(returnurl);
@@ -71,7 +91,136 @@ namespace ProyectoIdentity.Controllers
 
             return View(rgViewModel);
         }
-        
+
+
+
+        // Registro especial para Administradores
+
+        [HttpGet]
+        public async Task<IActionResult> RegistroAdministrador(string returnurl = null)
+        {
+            if (!await _roleManager.RoleExistsAsync("Administrador"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Administrador"));
+            }
+
+            if (!await _roleManager.RoleExistsAsync("Registrado"))
+            {
+                await _roleManager.CreateAsync(new IdentityRole("Registrado"));
+            }
+
+            //Para seleccion de Rol
+            List<SelectListItem> listaRoles = new List<SelectListItem>();
+            listaRoles.Add(new SelectListItem()
+            {
+                Value = "Registrado",
+                Text = "Registrado"
+            });
+            listaRoles.Add(new SelectListItem()
+            {
+                Value = "Administrador",
+                Text = "Administrador"
+            });
+
+
+            ViewData["ReturnUrl"] = returnurl;
+            RegistroViewModel registroVM = new RegistroViewModel()
+            {
+                ListaRoles= listaRoles,
+            };
+            return View(registroVM);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken] // Este Decorador se usa para prevenir ataques al enviar la informacion
+        public async Task<IActionResult> RegistroAdministrador(RegistroViewModel rgViewModel, string returnurl = null)
+        {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
+
+            if (ModelState.IsValid)
+            {
+                var usuario = new AppUsuario();
+                usuario.UserName = rgViewModel.Email;
+                usuario.Email = rgViewModel.Email;
+                usuario.Nombre = rgViewModel.Nombre;
+                usuario.Url = rgViewModel.Url;
+                usuario.CodigoPais = rgViewModel.CodigoPais;
+                usuario.Telefono = rgViewModel.Telefono;
+                usuario.Pais = rgViewModel.Pais;
+                usuario.Ciudad = rgViewModel.Ciudad;
+                usuario.Direccion = rgViewModel.Direccion;
+                usuario.FechaNacimiento = rgViewModel.FechaNacimiento;
+                usuario.Estado = rgViewModel.Estado;
+                //var usuario = new AppUsuario(UserName = rgViewModel.Email, Email = rgViewModel.Email, Url = rgViewModel.Url, CodigoPais = rgViewModel.CodigoPais, Telefono = rgViewModel.Telefono, Pais = rgViewModel.Pais, Ciudad = rgViewModel.Ciudad, Direccion = rgViewModel.Direccion, FechaNacimiento = rgViewModel.FechaNacimiento, Estado = rgViewModel.Estado);
+                var resultado = await _userManager.CreateAsync(usuario, rgViewModel.Password);
+
+                if (resultado.Succeeded)
+                {
+                    // Para seleccion de rol en el registro
+                    if(rgViewModel.RolSeleccionado != null && rgViewModel.RolSeleccionado.Length>0 && rgViewModel.RolSeleccionado == "Administrador")
+                    {
+                        await _userManager.AddToRoleAsync(usuario, "Administrador");
+                    }
+                    else
+                    {
+                        await _userManager.AddToRoleAsync(usuario, "Registrado");
+                    }
+                    {
+                        rgViewModel.RolSeleccionado = "Registrado";
+                    }
+
+
+                    // asignacion de usuario al registrarse
+                    await _userManager.AddToRoleAsync(usuario, "Registrado");
+
+                    await _signInManager.SignInAsync(usuario, isPersistent: false);
+                    //return RedirectToAction("Index", "Home");
+                    return LocalRedirect(returnurl);
+
+                }
+                ValidarErrores(resultado);
+            }
+            //Para seleccion de Rol
+            List<SelectListItem> listaRoles = new List<SelectListItem>();
+            listaRoles.Add(new SelectListItem()
+            {
+                Value = "Registrado",
+                Text = "Registrado"
+            });
+            listaRoles.Add(new SelectListItem()
+            {
+                Value = "Administrador",
+                Text = "Administrador"
+            });
+
+            rgViewModel.ListaRoles = listaRoles;
+
+            return View(rgViewModel);
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        [AllowAnonymous]
         private void ValidarErrores(IdentityResult resultado)
         {
             foreach(var error in resultado.Errors) 
@@ -82,6 +231,7 @@ namespace ProyectoIdentity.Controllers
 
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Acceso(string returnurl=null )
         {
             ViewData["ReturnUrl"]= returnurl;
@@ -91,6 +241,7 @@ namespace ProyectoIdentity.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AllowAnonymous]
         public async Task<IActionResult> Acceso(AccesoViewModel accViewModel, string returnurl = null)
         {
             ViewData["ReturnUrl"] = returnurl;
@@ -132,6 +283,7 @@ namespace ProyectoIdentity.Controllers
 
         //Metodo para Recuperar contraseña
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult OlvidoPassword()
         {
             return View();
@@ -139,6 +291,7 @@ namespace ProyectoIdentity.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AllowAnonymous]
         public async Task<IActionResult> OlvidoPassword(OlvidoPasswordViewModel opViewModel)
         {
             if (ModelState.IsValid)
@@ -168,6 +321,7 @@ namespace ProyectoIdentity.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult ResetPassword(string code=null)
         {
             return code == null? View("Error ") : View();
@@ -175,6 +329,7 @@ namespace ProyectoIdentity.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [AllowAnonymous]
         public async Task<IActionResult> ResetPassword(RecuperaPasswordViewModel rpViewModel)
         {
             if (ModelState.IsValid)
@@ -201,6 +356,7 @@ namespace ProyectoIdentity.Controllers
         }
 
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult ConfirmacionRecuperaPassword() 
         {
             return View();
