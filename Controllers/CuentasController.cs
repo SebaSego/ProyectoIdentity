@@ -259,7 +259,7 @@ namespace ProyectoIdentity.Controllers
                 }
                 if (resultado.IsLockedOut)
                 {
-                    return View("Bloqueado");
+                    return View("Denegado");
 
                 }
                 else
@@ -362,5 +362,14 @@ namespace ProyectoIdentity.Controllers
             return View();
         }
 
+
+        [HttpGet]
+        [AllowAnonymous]
+        public IActionResult Denegado(string returnurl = null)
+        {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
+            return View();
+        }
     }
 }
